@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    #070707;
+  background-size: 34px 34px;
+  color: #f4f4f5;
+}
+
+::selection {
+  background: #991b1b;
+  color: white;
+}
+
+.technical-panel {
+  background:
+    linear-gradient(135deg, rgba(127, 29, 29, 0.26), transparent 38%),
+    linear-gradient(180deg, rgba(24, 26, 29, 0.96), rgba(7, 7, 7, 0.96));
+}
+
+@media print {
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  article,
+  section,
+  div {
+    box-shadow: none !important;
+  }
+}
