@@ -1769,6 +1769,62 @@ export function getCourseById(courseId: string) {
   return courses.find((course) => course.id === courseId);
 }
 
+function normalizePrerequisite(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+const prerequisiteAliases: Record<string, string> = {
+  algebra: "algebra-and-trigonometry-for-engineering",
+  trigonometry: "algebra-and-trigonometry-for-engineering",
+  functions: "precalculus",
+  "precalculus functions": "precalculus",
+  "calculus i": "calculus-i-limits-derivatives-and-applications",
+  "calculus 1": "calculus-i-limits-derivatives-and-applications",
+  "calculus ii": "calculus-ii-integrals-series-and-applications",
+  "calculus 2": "calculus-ii-integrals-series-and-applications",
+  "calculus iii": "calculus-iii-multivariable-calculus",
+  "calculus 3": "calculus-iii-multivariable-calculus",
+  "basic vectors": "linear-algebra-for-engineers",
+  "vector components": "linear-algebra-for-engineers",
+  "vector algebra": "linear-algebra-for-engineers",
+  "physics mechanics": "classical-mechanics",
+  "engineering graphics": "engineering-graphics-and-cad",
+  "technical drawing basics": "engineering-graphics-and-cad",
+  "basic geometry": "engineering-graphics-and-cad",
+  "material properties": "materials-science",
+  "manufacturing basics": "manufacturing-processes",
+  "mechanical design curiosity": "introduction-to-mechanical-engineering",
+  "engineering problem solving mindset": "engineering-design-process"
+};
+
+export function getCourseForPrerequisite(prerequisite: string, currentCourseId?: string) {
+  const normalized = normalizePrerequisite(prerequisite);
+  const aliasId = prerequisiteAliases[normalized];
+  const aliasCourse = aliasId ? getCourseById(aliasId) : undefined;
+
+  if (aliasCourse && aliasCourse.id !== currentCourseId) {
+    return aliasCourse;
+  }
+
+  const exactCourse = courses.find(
+    (course) => normalizePrerequisite(course.title) === normalized
+  );
+
+  if (exactCourse && exactCourse.id !== currentCourseId) {
+    return exactCourse;
+  }
+
+  const prefixCourse = courses.find((course) =>
+    normalizePrerequisite(course.title).startsWith(normalized)
+  );
+
+  if (prefixCourse && prefixCourse.id !== currentCourseId) {
+    return prefixCourse;
+  }
+
+  return undefined;
+}
+
 export function getLectureById(lectureId: string) {
   return allLectures.find((lecture) => lecture.id === lectureId);
 }
