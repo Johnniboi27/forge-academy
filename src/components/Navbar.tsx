@@ -6,6 +6,7 @@ import { GraduationCap, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { SearchBar } from "@/components/SearchBar";
+import { AccountMenu } from "@/components/AccountMenu";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -49,6 +50,9 @@ export function Navbar() {
             </Link>
           ))}
         </nav>
+        <div className="hidden xl:block">
+          <AccountMenu />
+        </div>
         <button
           type="button"
           onClick={() => setIsOpen((value) => !value)}
@@ -62,6 +66,7 @@ export function Navbar() {
         <div className="border-t border-zinc-900 px-4 pb-4 xl:hidden">
           <div className="mx-auto max-w-7xl space-y-4">
             <SearchBar />
+            <AccountMenu />
             <nav className="grid gap-2 sm:grid-cols-2" aria-label="Mobile">
               {navLinks.map((link) => (
                 <Link

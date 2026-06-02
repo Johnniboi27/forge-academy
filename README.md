@@ -12,6 +12,7 @@ Forge Academy uses MIT OpenCourseWare as its source/reference layer. Course page
 - Lecture pages with explanations, equations, examples, engineering notes, and notes
 - Practice sets after every lecture with hints, solutions, scoring, retries, and mastery
 - Local progress dashboard with streaks, weak topics, course progress, and downloads
+- Local learner profiles with sign in, profile switching, export, and import
 - Search across courses, lectures, formulas, and practice problems
 - Searchable and printable formula library
 - Visual engineering pathway roadmap
@@ -82,4 +83,6 @@ To attach MIT OCW source materials, add an entry in `src/data/ocwSources.ts` und
 
 ## Progress Storage
 
-Progress is saved in the browser with LocalStorage under `forge-academy-progress-v1`. The saved state includes completed lectures, practice scores, mastered practice sets, notes by lecture ID, last opened course, missed problems, and practice streak metadata.
+Progress is saved in the browser with LocalStorage. Guest progress uses `forge-academy-progress-v1`; signed-in learner profiles use namespaced keys such as `forge-academy-progress-v1:learner-student-id`. The saved state includes completed lectures, practice scores, mastered practice sets, notes by lecture ID, last opened course, missed problems, and practice streak metadata.
+
+The account menu supports local learner profiles, profile switching, progress export, and progress import. Because the app is statically hosted on GitHub Pages, these profiles are local browser accounts rather than cloud-authenticated accounts. To add cross-device cloud login, connect a backend provider such as Firebase Auth + Firestore or Supabase Auth + Postgres.

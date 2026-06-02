@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Note, PracticeResult, ProgressState } from "@/types";
+import { slugify } from "@/lib/slug";
+import type { LearnerProfile, Note, PracticeResult, ProgressState } from "@/types";
 
 export const STORAGE_KEY = "forge-academy-progress-v1";
+export const PROFILE_STORAGE_KEY = "forge-academy-profiles-v1";
+export const ACTIVE_PROFILE_KEY = "forge-academy-active-profile-v1";
+const PROFILE_CHANGE_EVENT = "forge-academy-profile-change";
 
 const emptyProgress: ProgressState = {
   completedLectures: [],
@@ -27,13 +31,34 @@ function yesterdayKey() {
   return localDateKey(date);
 }
 
-function readProgress() {
+function profileProgressKey(profileId: string) {
+  return `${STORAGE_KEY}:${profileId}`;
+}
+
+function readProfiles() {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as LearnerProfile[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistProfiles(profiles: LearnerProfile[]) {
+  window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profiles));
+}
+
+function readProgress(storageKey: string) {
   if (typeof window === "undefined") {
     return emptyProgress;
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     if (!raw) {
       return emptyProgress;
     }
@@ -52,26 +77,53 @@ function readProgress() {
   }
 }
 
-function persistProgress(progress: ProgressState) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+function persistProgress(progress: ProgressState, storageKey: string) {
+  window.localStorage.setItem(storageKey, JSON.stringify(progress));
+}
+
+function notifyProfileChange() {
+  window.dispatchEvent(new Event(PROFILE_CHANGE_EVENT));
 }
 
 export function useLocalProgress() {
   const [progress, setProgress] = useState<ProgressState>(emptyProgress);
+  const [profiles, setProfiles] = useState<LearnerProfile[]>([]);
+  const [activeProfile, setActiveProfile] = useState<LearnerProfile | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    setProgress(readProgress());
+  const loadFromStorage = useCallback(() => {
+    const storedProfiles = readProfiles();
+    const activeProfileId = window.localStorage.getItem(ACTIVE_PROFILE_KEY);
+    const storedActiveProfile =
+      storedProfiles.find((profile) => profile.id === activeProfileId) ?? null;
+
+    setProfiles(storedProfiles);
+    setActiveProfile(storedActiveProfile);
+    setProgress(
+      readProgress(
+        storedActiveProfile ? profileProgressKey(storedActiveProfile.id) : STORAGE_KEY
+      )
+    );
     setIsReady(true);
   }, []);
+
+  useEffect(() => {
+    loadFromStorage();
+    window.addEventListener(PROFILE_CHANGE_EVENT, loadFromStorage);
+    return () => window.removeEventListener(PROFILE_CHANGE_EVENT, loadFromStorage);
+  }, [loadFromStorage]);
+
+  const currentStorageKey = activeProfile
+    ? profileProgressKey(activeProfile.id)
+    : STORAGE_KEY;
 
   const commit = useCallback((updater: (previous: ProgressState) => ProgressState) => {
     setProgress((previous) => {
       const next = updater(previous);
-      persistProgress(next);
+      persistProgress(next, currentStorageKey);
       return next;
     });
-  }, []);
+  }, [currentStorageKey]);
 
   const completedSet = useMemo(
     () => new Set(progress.completedLectures),
@@ -217,9 +269,133 @@ export function useLocalProgress() {
     commit(() => emptyProgress);
   }, [commit]);
 
+  const signInProfile = useCallback(
+    (name: string, email?: string) => {
+      const cleanedName = name.trim();
+      const cleanedEmail = email?.trim().toLowerCase();
+
+      if (!cleanedName) {
+        return;
+      }
+
+      const profileId = `learner-${slugify(cleanedEmail || cleanedName)}`;
+      const now = new Date().toISOString();
+      const existingProfile = profiles.find((profile) => profile.id === profileId);
+      const nextProfile: LearnerProfile = existingProfile
+        ? {
+            ...existingProfile,
+            name: cleanedName,
+            email: cleanedEmail || existingProfile.email,
+            lastLoginAt: now
+          }
+        : {
+            id: profileId,
+            name: cleanedName,
+            email: cleanedEmail || undefined,
+            createdAt: now,
+            lastLoginAt: now
+          };
+      const nextProfiles = existingProfile
+        ? profiles.map((profile) => (profile.id === profileId ? nextProfile : profile))
+        : [...profiles, nextProfile];
+      const targetStorageKey = profileProgressKey(profileId);
+      const targetHasProgress = Boolean(window.localStorage.getItem(targetStorageKey));
+
+      persistProfiles(nextProfiles);
+      window.localStorage.setItem(ACTIVE_PROFILE_KEY, profileId);
+
+      if (!targetHasProgress) {
+        persistProgress(progress, targetStorageKey);
+      }
+
+      setProfiles(nextProfiles);
+      setActiveProfile(nextProfile);
+      setProgress(readProgress(targetStorageKey));
+      notifyProfileChange();
+    },
+    [profiles, progress]
+  );
+
+  const signOutProfile = useCallback(() => {
+    window.localStorage.removeItem(ACTIVE_PROFILE_KEY);
+    setActiveProfile(null);
+    setProgress(readProgress(STORAGE_KEY));
+    notifyProfileChange();
+  }, []);
+
+  const deleteProfile = useCallback(
+    (profileId: string) => {
+      const nextProfiles = profiles.filter((profile) => profile.id !== profileId);
+      persistProfiles(nextProfiles);
+      window.localStorage.removeItem(profileProgressKey(profileId));
+      setProfiles(nextProfiles);
+
+      if (activeProfile?.id === profileId) {
+        window.localStorage.removeItem(ACTIVE_PROFILE_KEY);
+        setActiveProfile(null);
+        setProgress(readProgress(STORAGE_KEY));
+      }
+      notifyProfileChange();
+    },
+    [activeProfile?.id, profiles]
+  );
+
+  const exportProgressSnapshot = useCallback(() => {
+    return JSON.stringify(
+      {
+        exportedAt: new Date().toISOString(),
+        profile: activeProfile,
+        progress
+      },
+      null,
+      2
+    );
+  }, [activeProfile, progress]);
+
+  const importProgressSnapshot = useCallback(
+    (raw: string) => {
+      const parsed = JSON.parse(raw) as {
+        profile?: LearnerProfile | null;
+        progress?: ProgressState;
+      };
+      const importedProgress = parsed.progress ?? (parsed as ProgressState);
+      const importedProfile = parsed.profile;
+
+      if (importedProfile) {
+        const now = new Date().toISOString();
+        const nextProfile: LearnerProfile = {
+          ...importedProfile,
+          lastLoginAt: now
+        };
+        const nextProfiles = profiles.some((profile) => profile.id === nextProfile.id)
+          ? profiles.map((profile) =>
+              profile.id === nextProfile.id ? nextProfile : profile
+            )
+          : [...profiles, nextProfile];
+
+        persistProfiles(nextProfiles);
+        persistProgress(importedProgress, profileProgressKey(nextProfile.id));
+        window.localStorage.setItem(ACTIVE_PROFILE_KEY, nextProfile.id);
+        setProfiles(nextProfiles);
+        setActiveProfile(nextProfile);
+        setProgress(importedProgress);
+        notifyProfileChange();
+        return;
+      }
+
+      persistProgress(importedProgress, currentStorageKey);
+      setProgress(importedProgress);
+      notifyProfileChange();
+    },
+    [currentStorageKey, profiles]
+  );
+
   return {
     progress,
     isReady,
+    profiles,
+    activeProfile,
+    isGuest: !activeProfile,
     completedSet,
     masteredLectureIds,
     markLectureComplete,
@@ -228,6 +404,11 @@ export function useLocalProgress() {
     addNote,
     updateNote,
     deleteNote,
-    clearProgress
+    clearProgress,
+    signInProfile,
+    signOutProfile,
+    deleteProfile,
+    exportProgressSnapshot,
+    importProgressSnapshot
   };
 }

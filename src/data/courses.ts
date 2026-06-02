@@ -656,49 +656,569 @@ function defaultBlueprint(course: CourseDefinition): ModuleBlueprint[] {
   ];
 }
 
-function equationSet(course: CourseDefinition, lectureTitle: string) {
-  const lower = `${course.title} ${lectureTitle}`.toLowerCase();
+interface TopicProfile {
+  key: string;
+  label: string;
+  system: string;
+  equations: string[];
+  conceptCorrect: string;
+  conceptDistractors: string[];
+  designCorrect: string;
+  designDistractors: string[];
+  commonCheck: string;
+}
 
-  if (lower.includes("vector") || lower.includes("force") || lower.includes("static")) {
-    return [
-      "Fx = F cos(theta)",
-      "Fy = F sin(theta)",
-      "Sum Fx = 0, Sum Fy = 0",
-      "M = r x F"
-    ];
+function getTopicProfile(
+  course: CourseDefinition,
+  moduleTitle: string,
+  lectureTitle: string
+): TopicProfile {
+  const lower = `${course.title} ${moduleTitle} ${lectureTitle}`.toLowerCase();
+
+  if (lower.includes("linear algebra")) {
+    return {
+      key: "linear-algebra",
+      label: "matrix model",
+      system: "coupled engineering equations",
+      equations: [
+        "A x = b",
+        "det(A) != 0 for a unique solution",
+        "A v = lambda v",
+        "||x|| = sqrt(x1^2 + x2^2 + ... + xn^2)"
+      ],
+      conceptCorrect: "Check matrix dimensions and whether the unknown vector matches the physical variables.",
+      conceptDistractors: [
+        "Multiply matrices in any order because the same numbers appear.",
+        "Ignore units once the equations are placed in matrix form.",
+        "Assume every square matrix has a stable inverse."
+      ],
+      designCorrect: "Use the matrix form to expose coupling, rank, and sensitivity before trusting a solver result.",
+      designDistractors: [
+        "Invert every matrix manually without checking conditioning.",
+        "Drop small coefficients without explaining the modeling effect.",
+        "Treat eigenvalues as labels instead of system behavior indicators."
+      ],
+      commonCheck: "Dimensions, rank, conditioning, and unit consistency"
+    };
+  }
+
+  if (lower.includes("probability") || lower.includes("statistics") || lower.includes("data analysis")) {
+    return {
+      key: "statistics",
+      label: "uncertainty model",
+      system: "engineering data set",
+      equations: [
+        "z = (x - mu) / sigma",
+        "SE = s / sqrt(n)",
+        "CI = estimate +/- critical value x SE",
+        "P(A and B) = P(A | B) P(B)"
+      ],
+      conceptCorrect: "Identify the population, sample, uncertainty source, and assumptions behind the distribution.",
+      conceptDistractors: [
+        "Use the largest sample value as the expected design value.",
+        "Report a mean without variability because the average is enough.",
+        "Assume correlation proves a mechanical cause."
+      ],
+      designCorrect: "Use uncertainty bounds to decide whether the data supports the engineering claim.",
+      designDistractors: [
+        "Hide outliers without a measurement reason.",
+        "Use more decimal places as a substitute for confidence.",
+        "Compare test groups without checking sample size or variance."
+      ],
+      commonCheck: "Sample size, variance, confidence level, and measurement bias"
+    };
+  }
+
+  if (lower.includes("differential")) {
+    return {
+      key: "differential-equations",
+      label: "dynamic model",
+      system: "time-varying mechanical system",
+      equations: [
+        "dy/dt = f(t, y)",
+        "m x'' + c x' + k x = F(t)",
+        "Y(s) = L{y(t)}",
+        "steady state + transient response = total response"
+      ],
+      conceptCorrect: "Connect each derivative to a physical rate, storage term, or forcing effect.",
+      conceptDistractors: [
+        "Solve the equation before defining the initial condition.",
+        "Treat every transient as measurement noise.",
+        "Remove damping because it makes the algebra shorter."
+      ],
+      designCorrect: "Use the solution behavior to predict stability, settling, and sensitivity to inputs.",
+      designDistractors: [
+        "Choose constants only to make the graph look smooth.",
+        "Ignore initial conditions once the equation is written.",
+        "Assume linear behavior outside the modeled range."
+      ],
+      commonCheck: "Initial conditions, forcing function, stability, and units of each derivative"
+    };
+  }
+
+  if (lower.includes("numerical") || lower.includes("finite element") || lower.includes("computational fluid")) {
+    return {
+      key: "numerical-methods",
+      label: "discretized model",
+      system: "computational engineering model",
+      equations: [
+        "residual = A x - b",
+        "error approx C h^p",
+        "x_{k+1} = x_k - f(x_k) / f'(x_k)",
+        "CFL = u Delta t / Delta x"
+      ],
+      conceptCorrect: "Check convergence, discretization error, boundary conditions, and solver residuals.",
+      conceptDistractors: [
+        "Trust the mesh because the plot looks detailed.",
+        "Use the default time step without a stability check.",
+        "Treat a small residual as proof that the model is physically correct."
+      ],
+      designCorrect: "Compare mesh or time-step refinement before using the result in a design decision.",
+      designDistractors: [
+        "Use the finest mesh once and skip verification.",
+        "Change geometry and mesh at the same time during validation.",
+        "Ignore boundary-condition sensitivity."
+      ],
+      commonCheck: "Residuals, convergence rate, mesh independence, and boundary conditions"
+    };
+  }
+
+  if (lower.includes("calculus") || lower.includes("precalculus") || lower.includes("algebra") || lower.includes("trigonometry")) {
+    return {
+      key: "calculus",
+      label: "mathematical function model",
+      system: "engineering relationship between variables",
+      equations: [
+        "f'(x) = lim(h -> 0) [f(x + h) - f(x)] / h",
+        "Delta y approx f'(x) Delta x",
+        "Integral_a^b f(x) dx = accumulated change",
+        "sin^2(theta) + cos^2(theta) = 1"
+      ],
+      conceptCorrect: "Identify the input, output, units, and whether the problem asks for rate or accumulation.",
+      conceptDistractors: [
+        "Differentiate or integrate first and assign units later.",
+        "Assume every graph is linear near the design point.",
+        "Use degrees and radians interchangeably."
+      ],
+      designCorrect: "Use the function behavior to locate rates, extrema, and accumulated physical quantities.",
+      designDistractors: [
+        "Optimize a formula outside its valid domain.",
+        "Ignore discontinuities because the equation is convenient.",
+        "Treat symbolic simplification as engineering validation."
+      ],
+      commonCheck: "Domain, units, rate versus accumulation, and angle convention"
+    };
+  }
+
+  if (lower.includes("electricity") || lower.includes("magnetism")) {
+    return {
+      key: "electricity-magnetism",
+      label: "electromechanical circuit model",
+      system: "sensor, actuator, or circuit",
+      equations: [
+        "V = I R",
+        "P = V I",
+        "F = q(E + v x B)",
+        "tau = N I A B sin(theta)"
+      ],
+      conceptCorrect: "Define the field, current path, polarity, and energy conversion direction.",
+      conceptDistractors: [
+        "Choose current direction after calculating the answer.",
+        "Ignore sign conventions because voltage is scalar.",
+        "Treat magnetic force as always parallel to velocity."
+      ],
+      designCorrect: "Check power, polarity, heat generation, and actuator force before selecting components.",
+      designDistractors: [
+        "Size the circuit only by nominal voltage.",
+        "Ignore sensor loading on the measured signal.",
+        "Use magnetic equations without a geometry check."
+      ],
+      commonCheck: "Polarity, reference direction, power, and component limits"
+    };
+  }
+
+  if (lower.includes("waves") || lower.includes("oscillation") || lower.includes("vibrations")) {
+    return {
+      key: "vibrations",
+      label: "oscillating system",
+      system: "spring-mass, wave, or vibration mode",
+      equations: [
+        "omega_n = sqrt(k / m)",
+        "f = 1 / T",
+        "c_c = 2 sqrt(k m)",
+        "zeta = c / c_c"
+      ],
+      conceptCorrect: "Separate frequency, amplitude, damping, and phase before interpreting the response.",
+      conceptDistractors: [
+        "Treat high amplitude and high frequency as the same issue.",
+        "Ignore damping because it is hard to measure.",
+        "Use static stiffness to describe every dynamic response."
+      ],
+      designCorrect: "Compare natural frequency to excitation frequency and add damping or stiffness when needed.",
+      designDistractors: [
+        "Increase mass without checking the new resonance.",
+        "Tune stiffness from one data point only.",
+        "Ignore mode shape because the scalar frequency is known."
+      ],
+      commonCheck: "Natural frequency, damping ratio, excitation frequency, and mode shape"
+    };
+  }
+
+  if (lower.includes("modern") || lower.includes("quantum")) {
+    return {
+      key: "modern-physics",
+      label: "modern physics model",
+      system: "microscale material or energy interaction",
+      equations: [
+        "E = h f",
+        "p = h / lambda",
+        "E_k = h f - phi",
+        "Delta E = E_final - E_initial"
+      ],
+      conceptCorrect: "Identify the scale, energy level, and measurement limit before applying a classical analogy.",
+      conceptDistractors: [
+        "Use Newtonian particle intuition for every microscale result.",
+        "Ignore quantization when energy levels are discrete.",
+        "Treat wavelength as a visual-only property."
+      ],
+      designCorrect: "Connect the model to material behavior, sensors, radiation, or measurement resolution.",
+      designDistractors: [
+        "Assume macroscale formulas stay valid at all scales.",
+        "Use frequency without checking photon energy.",
+        "Ignore uncertainty introduced by the measurement method."
+      ],
+      commonCheck: "Scale, energy, wavelength, and measurement assumptions"
+    };
+  }
+
+  if (lower.includes("experimental") || lower.includes("lab")) {
+    return {
+      key: "experimental-methods",
+      label: "measurement system",
+      system: "engineering experiment",
+      equations: [
+        "percent error = |measured - accepted| / accepted x 100",
+        "uncertainty_total = sqrt(u1^2 + u2^2 + ...)",
+        "SNR = signal / noise",
+        "calibrated value = slope x reading + offset"
+      ],
+      conceptCorrect: "Define calibration, uncertainty, repeatability, and the measurement chain.",
+      conceptDistractors: [
+        "Use a single trial because the equipment is digital.",
+        "Report precision without calibration.",
+        "Average readings before checking bias."
+      ],
+      designCorrect: "Use uncertainty and repeatability to decide whether the experiment can validate the model.",
+      designDistractors: [
+        "Treat the cleanest run as the true result.",
+        "Ignore sensor placement because the sensor is calibrated.",
+        "Change the procedure after seeing the result."
+      ],
+      commonCheck: "Calibration, uncertainty, repeatability, and bias"
+    };
+  }
+
+  if (lower.includes("thermo") || lower.includes("engine") || lower.includes("combustion") || lower.includes("propulsion")) {
+    return {
+      key: "thermodynamics",
+      label: "thermal energy system",
+      system: "engine, heat pump, or control volume",
+      equations: [
+        "Delta U = Q - W",
+        "h = u + p v",
+        "eta = W_net / Q_in",
+        "q = m c_p Delta T"
+      ],
+      conceptCorrect: "Define the system boundary, heat/work sign convention, state properties, and process path.",
+      conceptDistractors: [
+        "Use temperature change alone as the complete energy balance.",
+        "Mix closed-system and control-volume equations.",
+        "Ignore losses because efficiency is reported separately."
+      ],
+      designCorrect: "Check energy balance, efficiency, heat rejection, and property states before sizing hardware.",
+      designDistractors: [
+        "Maximize work output without heat-rejection limits.",
+        "Compare cycles without specifying the same boundary.",
+        "Use ideal-gas assumptions without checking the state."
+      ],
+      commonCheck: "System boundary, property state, process path, and sign convention"
+    };
+  }
+
+  if (lower.includes("fluid") || lower.includes("hvac")) {
+    return {
+      key: "fluid-mechanics",
+      label: "flow system",
+      system: "pipe, duct, pump, or external-flow body",
+      equations: [
+        "rho A V = constant",
+        "p/(rho g) + V^2/(2g) + z = constant",
+        "Re = rho V D / mu",
+        "h_L = f (L/D) V^2/(2g)"
+      ],
+      conceptCorrect: "Identify compressibility, control volume, flow regime, and pressure-loss assumptions.",
+      conceptDistractors: [
+        "Apply Bernoulli across a pump without adding pump head.",
+        "Ignore viscosity whenever the pipe is short.",
+        "Use laminar formulas after the Reynolds number is turbulent."
+      ],
+      designCorrect: "Use flow rate, pressure loss, pump/duct limits, and Reynolds number to size the system.",
+      designDistractors: [
+        "Select a pump from flow rate alone.",
+        "Ignore fittings and entrance losses.",
+        "Use one velocity value for every section without area checks."
+      ],
+      commonCheck: "Continuity, pressure losses, Reynolds number, and control-volume boundary"
+    };
+  }
+
+  if (lower.includes("heat transfer")) {
+    return {
+      key: "heat-transfer",
+      label: "heat-transfer path",
+      system: "wall, fin, heat exchanger, or cooled component",
+      equations: [
+        "q_cond = k A Delta T / L",
+        "q_conv = h A (T_s - T_inf)",
+        "q_rad = epsilon sigma A (T_s^4 - T_sur^4)",
+        "R_total = R_cond + R_conv + R_contact"
+      ],
+      conceptCorrect: "Identify the heat-transfer mode, area, temperature difference, and thermal resistance path.",
+      conceptDistractors: [
+        "Add conduction and convection coefficients directly.",
+        "Use Celsius temperatures in radiation terms.",
+        "Ignore contact resistance in assembled parts."
+      ],
+      designCorrect: "Compare thermal resistance paths and surface conditions before selecting a cooling strategy.",
+      designDistractors: [
+        "Increase area without checking pressure drop or packaging.",
+        "Use a heat sink rating without boundary conditions.",
+        "Treat radiation as negligible without a temperature check."
+      ],
+      commonCheck: "Heat-transfer mode, area, temperature scale, and resistance network"
+    };
+  }
+
+  if (lower.includes("materials science") || lower.includes("mechanics of materials")) {
+    return {
+      key: "mechanics-materials",
+      label: "stress and material response",
+      system: "loaded member or material specimen",
+      equations: [
+        "sigma = P / A",
+        "epsilon = Delta L / L",
+        "tau = T r / J",
+        "sigma_b = M y / I"
+      ],
+      conceptCorrect: "Identify load type, section geometry, stress location, and material limit.",
+      conceptDistractors: [
+        "Use tensile strength for every loading mode.",
+        "Ignore stress concentration because nominal stress is lower.",
+        "Compare stress values without the same area definition."
+      ],
+      designCorrect: "Check stress, strain, deflection, and safety factor against the material behavior.",
+      designDistractors: [
+        "Use yield strength without considering fatigue.",
+        "Reduce thickness before checking deflection.",
+        "Ignore manufacturing defects in a brittle material."
+      ],
+      commonCheck: "Load path, section property, failure mode, and safety factor"
+    };
+  }
+
+  if (lower.includes("control")) {
+    return {
+      key: "control-systems",
+      label: "feedback system",
+      system: "controlled mechanical plant",
+      equations: [
+        "G_cl(s) = G(s) / (1 + G(s)H(s))",
+        "e(t) = r(t) - y(t)",
+        "percent overshoot = exp(-zeta pi / sqrt(1 - zeta^2)) x 100",
+        "tau = 1 / bandwidth"
+      ],
+      conceptCorrect: "Define the plant, sensor, actuator, feedback sign, and performance requirement.",
+      conceptDistractors: [
+        "Add gain until the response looks fast.",
+        "Ignore sensor noise because feedback will correct it.",
+        "Use open-loop behavior to claim closed-loop stability."
+      ],
+      designCorrect: "Balance stability margin, rise time, overshoot, actuator limits, and sensor noise.",
+      designDistractors: [
+        "Tune for speed without checking saturation.",
+        "Remove filtering because it adds phase lag.",
+        "Ignore disturbance rejection."
+      ],
+      commonCheck: "Feedback sign, stability margin, bandwidth, and actuator saturation"
+    };
+  }
+
+  if (lower.includes("robotics") || lower.includes("mechatronics")) {
+    return {
+      key: "robotics-mechatronics",
+      label: "mechatronic subsystem",
+      system: "robot joint, sensor, or actuator",
+      equations: [
+        "tau = r x F",
+        "P = tau omega",
+        "theta_dot = J(q) q_dot",
+        "resolution = range / counts"
+      ],
+      conceptCorrect: "Connect mechanical load, actuator capacity, sensor resolution, and control timing.",
+      conceptDistractors: [
+        "Choose a motor from speed rating alone.",
+        "Ignore backlash because the controller can compensate perfectly.",
+        "Use sensor range without checking resolution."
+      ],
+      designCorrect: "Check torque, speed, sensing, wiring, and controller bandwidth as one integrated system.",
+      designDistractors: [
+        "Oversize the actuator without thermal analysis.",
+        "Place sensors wherever packaging is easiest.",
+        "Tune software before validating the mechanism."
+      ],
+      commonCheck: "Torque, speed, sensor resolution, backlash, and timing"
+    };
+  }
+
+  if (lower.includes("cad") || lower.includes("graphics")) {
+    return {
+      key: "cad",
+      label: "CAD design intent",
+      system: "parametric part, drawing, or assembly",
+      equations: [
+        "clearance = hole size - shaft size",
+        "tolerance stack = sqrt(t1^2 + t2^2 + ...)",
+        "scale factor = drawing length / actual length",
+        "mass = density x volume"
+      ],
+      conceptCorrect: "Preserve design intent with stable references, constraints, dimensions, and tolerances.",
+      conceptDistractors: [
+        "Fully define sketches by eye because the model looks correct.",
+        "Reference temporary edges that may disappear after edits.",
+        "Leave tolerances until manufacturing asks for them."
+      ],
+      designCorrect: "Use constraints, datum choices, assembly references, and tolerances to make the model editable.",
+      designDistractors: [
+        "Model every fillet first because it improves appearance.",
+        "Use decorative dimensions as manufacturing dimensions.",
+        "Suppress failed features without understanding dependencies."
+      ],
+      commonCheck: "Constraints, datums, references, tolerances, and manufacturability"
+    };
+  }
+
+  if (lower.includes("manufacturing") || lower.includes("machine") || lower.includes("mechanical design") || lower.includes("design process") || lower.includes("capstone")) {
+    return {
+      key: "machine-design",
+      label: "machine design decision",
+      system: "mechanical component or assembly",
+      equations: [
+        "n = allowable stress / working stress",
+        "P = tau omega",
+        "L_10 = (C / P)^p x 10^6 rev",
+        "tau = T r / J"
+      ],
+      conceptCorrect: "Translate function into loads, failure modes, manufacturability, and verification tests.",
+      conceptDistractors: [
+        "Choose the lightest component before checking fatigue.",
+        "Use catalog ratings without matching duty cycle.",
+        "Treat manufacturability as separate from design."
+      ],
+      designCorrect: "Select geometry, material, process, and safety factor around the critical failure mode.",
+      designDistractors: [
+        "Optimize one part while ignoring assembly constraints.",
+        "Increase safety factor without diagnosing uncertainty.",
+        "Skip tolerance review until the prototype fails."
+      ],
+      commonCheck: "Load case, failure mode, process constraint, and verification plan"
+    };
+  }
+
+  if (lower.includes("statics") || lower.includes("force") || lower.includes("equilibrium") || lower.includes("moment")) {
+    return {
+      key: "statics",
+      label: "equilibrium model",
+      system: "rigid body or particle at rest",
+      equations: [
+        "Sum F_x = 0",
+        "Sum F_y = 0",
+        "Sum M_O = 0",
+        "M = r x F"
+      ],
+      conceptCorrect: "Draw the isolated body, external forces, support reactions, dimensions, and moment point.",
+      conceptDistractors: [
+        "Include internal forces from inside the isolated body.",
+        "Use the same sign convention only after solving.",
+        "Choose a moment point without considering unknown reactions."
+      ],
+      designCorrect: "Use equilibrium to find reactions and load paths before sizing members or joints.",
+      designDistractors: [
+        "Size the part from the largest applied force only.",
+        "Ignore support type because the body is not moving.",
+        "Assume symmetry without checking geometry and loading."
+      ],
+      commonCheck: "Free-body boundary, reaction directions, dimensions, and moment balance"
+    };
   }
 
   if (lower.includes("dynamic") || lower.includes("mechanics") || lower.includes("motion")) {
-    return ["v = dx/dt", "a = dv/dt", "Sum F = m a", "T1 + V1 = T2 + V2"];
+    return {
+      key: "dynamics",
+      label: "motion and force model",
+      system: "moving particle or rigid body",
+      equations: [
+        "v = dx/dt",
+        "a = dv/dt",
+        "Sum F = m a",
+        "T_1 + V_1 + U_12 = T_2 + V_2"
+      ],
+      conceptCorrect: "Define the coordinate system, acceleration components, constraints, and inertial frame.",
+      conceptDistractors: [
+        "Use speed as acceleration because both describe motion.",
+        "Ignore constraint directions once the path is known.",
+        "Apply energy methods without checking nonconservative work."
+      ],
+      designCorrect: "Use kinematics and kinetics together to predict loads, speeds, impacts, and actuator demand.",
+      designDistractors: [
+        "Design from static load when acceleration is significant.",
+        "Ignore rotational inertia in a fast mechanism.",
+        "Use final speed without checking the motion path."
+      ],
+      commonCheck: "Coordinate system, acceleration, constraints, and inertial assumptions"
+    };
   }
 
-  if (lower.includes("thermo") || lower.includes("heat")) {
-    return ["Delta U = Q - W", "h = u + pv", "eta = W_net / Q_in", "q = m c Delta T"];
-  }
+  return {
+    key: "engineering-modeling",
+    label: "engineering model",
+    system: "mechanical engineering problem",
+    equations: [
+      "model output = f(inputs, assumptions)",
+      "safety factor = capacity / demand",
+      "error = measured value - predicted value",
+      "percent change = Delta value / reference value x 100"
+    ],
+    conceptCorrect: "State the objective, assumptions, variables, units, and validation check.",
+    conceptDistractors: [
+      "Substitute values before defining the system.",
+      "Use the most familiar equation regardless of assumptions.",
+      "Report a result without comparing it to a requirement."
+    ],
+    designCorrect: "Connect the calculation to a requirement, verification method, and engineering decision.",
+    designDistractors: [
+      "Optimize a number without understanding its constraint.",
+      "Skip validation because the equation is standard.",
+      "Use visual plausibility as the only design check."
+    ],
+    commonCheck: "Objective, assumptions, units, constraints, and validation"
+  };
+}
 
-  if (lower.includes("fluid")) {
-    return [
-      "rho A V = constant",
-      "p/rho g + V^2/2g + z = constant",
-      "Re = rho V D / mu",
-      "hL = f (L/D) V^2/2g"
-    ];
-  }
-
-  if (lower.includes("cad") || lower.includes("design") || lower.includes("machine")) {
-    return [
-      "Clearance = hole size - shaft size",
-      "n = strength / working stress",
-      "tau = T r / J",
-      "Power = torque x angular speed"
-    ];
-  }
-
+function equationSet(course: CourseDefinition, moduleTitle: string, lectureTitle: string) {
+  const profile = getTopicProfile(course, moduleTitle, lectureTitle);
   return [
-    "dy/dx = lim(h -> 0) [f(x + h) - f(x)] / h",
-    "Delta y approx f'(x) Delta x",
-    "Integral f(x) dx represents accumulated change",
-    "error = measured value - accepted value"
+    ...profile.equations.slice(0, 3),
+    `${course.title} / ${moduleTitle} / ${lectureTitle}: ${profile.commonCheck}`
   ];
 }
 
@@ -744,136 +1264,411 @@ function makePracticeProblems(
 ): PracticeProblem[] {
   const topic = `${course.title} / ${moduleTitle}`;
   const baseId = `${courseId}-${slugify(moduleTitle)}-${slugify(lectureTitle)}`;
-  const numericValue = 24 + moduleIndex * 6 + lectureIndex * 3;
-  const isStaticsForce =
-    course.title === "Statics" && moduleTitle === "Force Vectors" && lectureTitle === "Scalars and Vectors";
+  const profile = getTopicProfile(course, moduleTitle, lectureTitle);
   const thirdType = thirdProblemTypes[(moduleIndex + lectureIndex) % thirdProblemTypes.length];
+  const seed = 18 + moduleIndex * 7 + lectureIndex * 5 + course.title.length;
 
   const concept: PracticeProblem = {
     id: `${baseId}-concept`,
     type: "concept",
-    question: `When studying ${lectureTitle}, what is the strongest first check before trusting a calculation?`,
+    question: `In ${course.title}, ${lectureTitle} focuses on a ${profile.label}. What should be checked first?`,
     response: {
       kind: "multiple-choice",
-      options: [
-        "The assumptions, units, and direction conventions are consistent.",
-        "The final number has many decimal places.",
-        "The diagram looks visually symmetric.",
-        "The same formula was used in the previous lecture."
-      ],
-      correctOption: "The assumptions, units, and direction conventions are consistent."
+      options: [profile.conceptCorrect, ...profile.conceptDistractors],
+      correctOption: profile.conceptCorrect
     },
-    hint: "Engineering calculations fail early when the model is unclear.",
-    solution:
-      "A calculation should begin with assumptions, units, coordinate directions, and known quantities. Precision does not fix a wrong model.",
+    hint: `Focus on the ${profile.system} and the assumptions that make the model valid.`,
+    solution: `${profile.conceptCorrect} This keeps the ${profile.label} tied to the actual engineering situation before any arithmetic begins.`,
     explanation:
-      "This concept check reinforces disciplined setup before substitution.",
+      `This concept check is specific to ${moduleTitle}: the strongest setup step is not generic precision, but the correct model boundary for ${profile.system}.`,
     topic
   };
 
-  const calculation: PracticeProblem = isStaticsForce
-    ? {
-        id: "statics-force-001",
-        type: "calculation",
-        question:
-          "A 200 N force acts at 30 degrees above the horizontal. Find the x and y components.",
-        response: {
-          kind: "vector",
-          values: {
-            Fx: 173.2,
-            Fy: 100
-          },
-          tolerance: 0.5,
-          unit: "N"
-        },
-        hint: "Use Fx = F cos(theta) and Fy = F sin(theta).",
-        solution: "Fx = 200cos(30) = 173.2 N. Fy = 200sin(30) = 100 N.",
-        explanation:
-          "Resolving force vectors is the foundation for equilibrium, reactions, and member force calculations.",
-        topic
-      }
-    : {
-        id: `${baseId}-calculation`,
-        type: (lectureIndex + moduleIndex) % 3 === 0 ? "unit-conversion" : "calculation",
-        question:
-          (lectureIndex + moduleIndex) % 3 === 0
-            ? `Convert ${numericValue * 10} mm to meters for a ${lectureTitle.toLowerCase()} calculation.`
-            : `A simplified ${lectureTitle.toLowerCase()} model uses a value of ${numericValue} and a factor of 2.5. Compute the design estimate.`,
-        response:
-          (lectureIndex + moduleIndex) % 3 === 0
-            ? {
-                kind: "numeric",
-                value: (numericValue * 10) / 1000,
-                tolerance: 0.001,
-                unit: "m"
-              }
-            : {
-                kind: "numeric",
-                value: numericValue * 2.5,
-                tolerance: 0.1
-              },
-        hint:
-          (lectureIndex + moduleIndex) % 3 === 0
-            ? "There are 1000 mm in 1 m."
-            : "Multiply the base value by the engineering factor.",
-        solution:
-          (lectureIndex + moduleIndex) % 3 === 0
-            ? `${numericValue * 10} mm x (1 m / 1000 mm) = ${((numericValue * 10) / 1000).toFixed(3)} m.`
-            : `${numericValue} x 2.5 = ${(numericValue * 2.5).toFixed(1)}.`,
-        explanation:
-          "Numerical fluency matters because unit errors and scale errors can invalidate otherwise correct reasoning.",
-        topic
-      };
+  const calculation = makeCalculationProblem(
+    profile,
+    course,
+    moduleTitle,
+    lectureTitle,
+    baseId,
+    seed,
+    topic
+  );
 
   const scenario: PracticeProblem = {
     id: `${baseId}-${thirdType}`,
     type: thirdType,
     question:
       thirdType === "free-body"
-        ? `For a ${lectureTitle.toLowerCase()} problem, which item belongs on the free-body or system diagram?`
+          ? `For ${course.title} / ${lectureTitle}, what belongs on the diagram or system sketch for the ${profile.system}?`
         : thirdType === "challenge"
-          ? `A prototype result from ${lectureTitle.toLowerCase()} is outside the expected range. What is the best next engineering action?`
-          : `Which design decision best reflects the lesson from ${lectureTitle}?`,
+          ? `In ${course.title} / ${moduleTitle}, a result from ${lectureTitle} conflicts with the expected ${profile.label}. What is the best next engineering action?`
+          : `Which ${course.title} design decision best reflects ${moduleTitle} / ${lectureTitle} for the ${profile.system}?`,
     response: {
       kind: "multiple-choice",
       options:
         thirdType === "free-body"
           ? [
-              "All external interactions acting on the isolated body or system.",
-              "Only forces that point to the right.",
-              "Only dimensions that make the drawing look balanced.",
-              "Internal forces that cancel inside the isolated part."
+              `${profile.conceptCorrect}`,
+              "Only the values that make the sketch visually balanced.",
+              "Only interactions that point in the positive coordinate direction.",
+              "Internal details that are outside the chosen system boundary."
             ]
           : thirdType === "challenge"
             ? [
-                "Audit assumptions, boundary conditions, units, and measurement quality before redesigning.",
-                "Delete the largest data point and report the average.",
-                "Increase every safety factor without diagnosing the model.",
-                "Switch to a more complex equation immediately."
+                `Audit ${profile.commonCheck.toLowerCase()} before changing the design.`,
+                "Delete the most inconvenient data point and recalculate.",
+                "Use a more complex equation before checking assumptions.",
+                "Increase every safety factor without identifying the uncertainty."
               ]
             : [
-                "Select the option that satisfies function, safety, manufacturability, and verification.",
-                "Choose the lightest part regardless of stress.",
-                "Avoid documenting assumptions until the final report.",
-                "Optimize one variable while ignoring constraints."
+                profile.designCorrect,
+                ...profile.designDistractors
               ],
       correctOption:
         thirdType === "free-body"
-          ? "All external interactions acting on the isolated body or system."
+          ? profile.conceptCorrect
           : thirdType === "challenge"
-            ? "Audit assumptions, boundary conditions, units, and measurement quality before redesigning."
-            : "Select the option that satisfies function, safety, manufacturability, and verification."
+            ? `Audit ${profile.commonCheck.toLowerCase()} before changing the design.`
+            : profile.designCorrect
     },
-    hint:
-      "A good engineering answer respects the model boundary and the design objective.",
-    solution:
-      "The best choice is the one that keeps the model physically honest and connects the calculation to verification.",
+    hint: `Tie the decision to ${profile.commonCheck.toLowerCase()}.`,
+    solution: `The best choice is the one that preserves ${profile.commonCheck.toLowerCase()} for the ${profile.system}.`,
     explanation:
-      "This scenario links lecture knowledge to the judgment required in mechanical engineering work.",
+      `This scenario is intentionally tied to ${course.title}; overlapping courses may share physics, but the engineering check differs by topic and system.`,
     topic
   };
 
   return [concept, calculation, scenario];
+}
+
+function makeCalculationProblem(
+  profile: TopicProfile,
+  course: CourseDefinition,
+  moduleTitle: string,
+  lectureTitle: string,
+  baseId: string,
+  seed: number,
+  topic: string
+): PracticeProblem {
+  const context = `${course.title} / ${moduleTitle} / ${lectureTitle}`;
+
+  if (profile.key === "statics") {
+    const force = 120 + seed * 3;
+    const angle = 30 + (seed % 4) * 5;
+    const radians = (angle * Math.PI) / 180;
+    return {
+      id: `${baseId}-force-components`,
+      type: "calculation",
+      question: `${context}: A ${force} N force acts ${angle} degrees above the positive x-axis. Find Fx and Fy.`,
+      response: {
+        kind: "vector",
+        values: {
+          Fx: Number((force * Math.cos(radians)).toFixed(1)),
+          Fy: Number((force * Math.sin(radians)).toFixed(1))
+        },
+        tolerance: 0.6,
+        unit: "N"
+      },
+      hint: "Resolve the force with Fx = F cos(theta) and Fy = F sin(theta).",
+      solution: `Fx = ${force}cos(${angle}) and Fy = ${force}sin(${angle}). Keep the sign convention tied to the chosen axes.`,
+      explanation: "Statics practice needs force components and directions before equilibrium equations can be trusted.",
+      topic
+    };
+  }
+
+  if (profile.key === "dynamics") {
+    const mass = 4 + (seed % 6);
+    const force = 30 + seed;
+    return {
+      id: `${baseId}-acceleration`,
+      type: "calculation",
+      question: `${context}: A ${mass} kg carriage is pulled by a net force of ${force} N. Find the acceleration.`,
+      response: {
+        kind: "numeric",
+        value: Number((force / mass).toFixed(2)),
+        tolerance: 0.05,
+        unit: "m/s^2"
+      },
+      hint: "Use Sum F = m a after confirming the force is net force.",
+      solution: `a = F / m = ${force} / ${mass} = ${(force / mass).toFixed(2)} m/s^2.`,
+      explanation: "Dynamics calculations must distinguish applied force from net force after constraints and friction.",
+      topic
+    };
+  }
+
+  if (profile.key === "mechanics-materials") {
+    const load = 20 + seed;
+    const area = 80 + seed * 2;
+    const stress = (load * 1000) / area;
+    return {
+      id: `${baseId}-stress`,
+      type: "calculation",
+      question: `${context}: A member carries ${load} kN over ${area} mm^2. Estimate the average normal stress in MPa.`,
+      response: {
+        kind: "numeric",
+        value: Number(stress.toFixed(1)),
+        tolerance: 0.5,
+        unit: "MPa"
+      },
+      hint: "In N/mm^2, sigma = P/A and 1 N/mm^2 = 1 MPa.",
+      solution: `sigma = (${load} x 1000 N) / ${area} mm^2 = ${stress.toFixed(1)} MPa.`,
+      explanation: "Mechanics of materials questions must track area definition and load path.",
+      topic
+    };
+  }
+
+  if (profile.key === "thermodynamics") {
+    const mass = 2 + (seed % 4);
+    const cp = 1.0;
+    const deltaT = 25 + seed;
+    const heat = mass * cp * deltaT;
+    return {
+      id: `${baseId}-energy-balance`,
+      type: "calculation",
+      question: `${context}: ${mass} kg of air is heated by ${deltaT} K. Using cp = 1.0 kJ/(kg K), estimate heat input.`,
+      response: {
+        kind: "numeric",
+        value: Number(heat.toFixed(1)),
+        tolerance: 0.2,
+        unit: "kJ"
+      },
+      hint: "Use q = m cp Delta T for this simplified constant-pressure heating model.",
+      solution: `q = ${mass} x ${cp.toFixed(1)} x ${deltaT} = ${heat.toFixed(1)} kJ.`,
+      explanation: "Thermodynamics practice starts by defining the boundary and process model.",
+      topic
+    };
+  }
+
+  if (profile.key === "fluid-mechanics") {
+    const area = Number((0.015 + (seed % 5) * 0.004).toFixed(3));
+    const velocity = 2 + (seed % 7);
+    const flow = area * velocity;
+    return {
+      id: `${baseId}-flow-rate`,
+      type: "calculation",
+      question: `${context}: Water flows through an area of ${area} m^2 at ${velocity} m/s. Find the volume flow rate.`,
+      response: {
+        kind: "numeric",
+        value: Number(flow.toFixed(3)),
+        tolerance: 0.002,
+        unit: "m^3/s"
+      },
+      hint: "For incompressible flow, Q = A V.",
+      solution: `Q = ${area} x ${velocity} = ${flow.toFixed(3)} m^3/s.`,
+      explanation: "Fluid mechanics questions require matching flow area, velocity, and control-volume assumptions.",
+      topic
+    };
+  }
+
+  if (profile.key === "heat-transfer") {
+    const k = 12 + (seed % 8);
+    const area = Number((0.4 + (seed % 4) * 0.1).toFixed(1));
+    const deltaT = 30 + seed;
+    const length = Number((0.08 + (seed % 3) * 0.02).toFixed(2));
+    const heatRate = (k * area * deltaT) / length;
+    return {
+      id: `${baseId}-conduction`,
+      type: "calculation",
+      question: `${context}: A wall has k = ${k} W/(m K), A = ${area} m^2, Delta T = ${deltaT} K, and L = ${length} m. Estimate conduction heat rate.`,
+      response: {
+        kind: "numeric",
+        value: Number(heatRate.toFixed(0)),
+        tolerance: 2,
+        unit: "W"
+      },
+      hint: "Use q = k A Delta T / L.",
+      solution: `q = ${k} x ${area} x ${deltaT} / ${length} = ${heatRate.toFixed(0)} W.`,
+      explanation: "Heat-transfer calculations must identify the mode and thermal path before combining resistances.",
+      topic
+    };
+  }
+
+  if (profile.key === "machine-design" || profile.key === "robotics-mechatronics") {
+    const torque = 8 + seed;
+    const speed = 12 + (seed % 8);
+    const power = torque * speed;
+    return {
+      id: `${baseId}-power`,
+      type: "calculation",
+      question: `${context}: A shaft transmits ${torque} N m at ${speed} rad/s. Estimate mechanical power.`,
+      response: {
+        kind: "numeric",
+        value: Number(power.toFixed(1)),
+        tolerance: 0.2,
+        unit: "W"
+      },
+      hint: "Use P = torque x angular speed.",
+      solution: `P = ${torque} x ${speed} = ${power.toFixed(1)} W.`,
+      explanation: "Machine design practice connects loads and motion to component selection.",
+      topic
+    };
+  }
+
+  if (profile.key === "cad") {
+    const hole = Number((10 + (seed % 5) * 0.2).toFixed(1));
+    const shaft = Number((hole - 0.3).toFixed(1));
+    return {
+      id: `${baseId}-clearance`,
+      type: "calculation",
+      question: `${context}: A hole is ${hole} mm and a shaft is ${shaft} mm. Find the clearance.`,
+      response: {
+        kind: "numeric",
+        value: Number((hole - shaft).toFixed(2)),
+        tolerance: 0.01,
+        unit: "mm"
+      },
+      hint: "Clearance is hole size minus shaft size.",
+      solution: `clearance = ${hole} - ${shaft} = ${(hole - shaft).toFixed(2)} mm.`,
+      explanation: "CAD and drawings need dimensions that communicate fit, not just geometry.",
+      topic
+    };
+  }
+
+  if (profile.key === "control-systems" || profile.key === "vibrations") {
+    const stiffness = 1200 + seed * 20;
+    const mass = 6 + (seed % 5);
+    const omega = Math.sqrt(stiffness / mass);
+    return {
+      id: `${baseId}-natural-frequency`,
+      type: "calculation",
+      question: `${context}: A mass-spring approximation has k = ${stiffness} N/m and m = ${mass} kg. Estimate natural angular frequency.`,
+      response: {
+        kind: "numeric",
+        value: Number(omega.toFixed(2)),
+        tolerance: 0.05,
+        unit: "rad/s"
+      },
+      hint: "Use omega_n = sqrt(k/m).",
+      solution: `omega_n = sqrt(${stiffness}/${mass}) = ${omega.toFixed(2)} rad/s.`,
+      explanation: "Vibration and control design must compare natural response with excitation and bandwidth.",
+      topic
+    };
+  }
+
+  if (profile.key === "electricity-magnetism") {
+    const current = 2 + (seed % 5);
+    const resistance = 12 + seed;
+    const voltage = current * resistance;
+    return {
+      id: `${baseId}-ohms-law`,
+      type: "calculation",
+      question: `${context}: A sensor circuit carries ${current} A through ${resistance} ohms. Find voltage drop.`,
+      response: {
+        kind: "numeric",
+        value: voltage,
+        tolerance: 0.1,
+        unit: "V"
+      },
+      hint: "Use V = I R.",
+      solution: `V = ${current} x ${resistance} = ${voltage} V.`,
+      explanation: "Electrical calculations in mechatronics still need polarity, power, and component limits.",
+      topic
+    };
+  }
+
+  if (profile.key === "statistics") {
+    const sample = 40 + seed;
+    const mean = 35 + (seed % 8);
+    const deviation = 5 + (seed % 3);
+    const z = (sample - mean) / deviation;
+    return {
+      id: `${baseId}-z-score`,
+      type: "calculation",
+      question: `${context}: A test value is ${sample}, with mean ${mean} and standard deviation ${deviation}. Find the z-score.`,
+      response: {
+        kind: "numeric",
+        value: Number(z.toFixed(2)),
+        tolerance: 0.03
+      },
+      hint: "Use z = (x - mu) / sigma.",
+      solution: `z = (${sample} - ${mean}) / ${deviation} = ${z.toFixed(2)}.`,
+      explanation: "Data analysis practice should keep uncertainty and comparison scale visible.",
+      topic
+    };
+  }
+
+  if (profile.key === "linear-algebra") {
+    const a = 2 + (seed % 4);
+    const b = 1 + (seed % 3);
+    const c = 3 + (seed % 5);
+    const d = 4 + (seed % 6);
+    const determinant = a * d - b * c;
+    return {
+      id: `${baseId}-determinant`,
+      type: "calculation",
+      question: `${context}: For matrix [[${a}, ${b}], [${c}, ${d}]], find the determinant.`,
+      response: {
+        kind: "numeric",
+        value: determinant,
+        tolerance: 0.01
+      },
+      hint: "For a 2 by 2 matrix, det(A) = ad - bc.",
+      solution: `det(A) = ${a} x ${d} - ${b} x ${c} = ${determinant}.`,
+      explanation: "The determinant check helps decide whether a two-equation engineering system has a unique solution.",
+      topic
+    };
+  }
+
+  if (profile.key === "calculus" || profile.key === "differential-equations") {
+    const a = 2 + (seed % 4);
+    const b = 3 + (seed % 5);
+    const x = 1 + (seed % 6);
+    const slope = 2 * a * x + b;
+    return {
+      id: `${baseId}-slope`,
+      type: "calculation",
+      question: `${context}: For f(x) = ${a}x^2 + ${b}x, find f'(${x}).`,
+      response: {
+        kind: "numeric",
+        value: slope,
+        tolerance: 0.01
+      },
+      hint: "Differentiate first: f'(x) = 2ax + b.",
+      solution: `f'(x) = ${2 * a}x + ${b}; f'(${x}) = ${slope}.`,
+      explanation: "Calculus practice should distinguish a rate at a point from accumulated change over an interval.",
+      topic
+    };
+  }
+
+  if (profile.key === "experimental-methods") {
+    const accepted = 100 + seed;
+    const measured = accepted + 3 + (seed % 4);
+    const percentError = (Math.abs(measured - accepted) / accepted) * 100;
+    return {
+      id: `${baseId}-percent-error`,
+      type: "calculation",
+      question: `${context}: A calibrated value is ${accepted} and a measured value is ${measured}. Find percent error.`,
+      response: {
+        kind: "numeric",
+        value: Number(percentError.toFixed(2)),
+        tolerance: 0.03,
+        unit: "%"
+      },
+      hint: "Use percent error = |measured - accepted| / accepted x 100.",
+      solution: `percent error = |${measured} - ${accepted}| / ${accepted} x 100 = ${percentError.toFixed(2)}%.`,
+      explanation: "Experimental methods require uncertainty and calibration checks, not just a single measured value.",
+      topic
+    };
+  }
+
+  const value = 20 + seed;
+  const factor = 1.5 + (seed % 5) * 0.2;
+  const estimate = value * factor;
+
+  return {
+    id: `${baseId}-topic-estimate`,
+    type: (seed + moduleTitle.length) % 3 === 0 ? "unit-conversion" : "calculation",
+    question: `${context}: A ${profile.label} uses ${value} as the baseline and ${factor.toFixed(1)} as the topic factor. Compute the estimate.`,
+    response: {
+      kind: "numeric",
+      value: Number(estimate.toFixed(1)),
+      tolerance: 0.1
+    },
+    hint: `Use the ${profile.label} relationship and keep the ${profile.commonCheck.toLowerCase()} visible.`,
+    solution: `${value} x ${factor.toFixed(1)} = ${estimate.toFixed(1)}.`,
+    explanation: `The arithmetic is simple, but the topic-specific check is ${profile.commonCheck.toLowerCase()}.`,
+    topic
+  };
 }
 
 function makeLecture(
@@ -899,7 +1694,7 @@ function makeLecture(
       `${lectureTitle} develops the model-building discipline needed for ${moduleTitle.toLowerCase()} in ${course.title}. The goal is to connect symbols, physical meaning, units, and assumptions before committing to computation.`,
       "In mechanical engineering, a correct result must be traceable. Each step should reveal what was isolated, what was assumed, which relationship was applied, and whether the magnitude could exist in a real component or system."
     ],
-    keyEquations: equationSet(course, lectureTitle),
+    keyEquations: equationSet(course, moduleTitle, lectureTitle),
     applications: [
       "Checking design calculations before prototype release",
       "Explaining model assumptions in technical reports",

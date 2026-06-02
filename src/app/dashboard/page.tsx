@@ -52,7 +52,7 @@ const quickLinks = [
 ];
 
 export default function DashboardPage() {
-  const { progress } = useLocalProgress();
+  const { progress, activeProfile, isGuest } = useLocalProgress();
   const completedCount = progress.completedLectures.length;
   const masteredCount = Object.values(progress.practiceResults).filter(
     (result) => result.mastered
@@ -109,6 +109,11 @@ export default function DashboardPage() {
           <p className="mt-4 max-w-3xl text-zinc-400">
             Track lecture completion, practice mastery, weak topics, and the next engineering problem worth solving.
           </p>
+          <p className="mt-3 inline-flex rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">
+            {isGuest
+              ? "Guest mode: progress is saved in this browser."
+              : `Signed in as ${activeProfile?.name}: progress is saved under this learner profile.`}
+          </p>
         </div>
         <button
           type="button"
@@ -124,7 +129,7 @@ export default function DashboardPage() {
         <DashboardStat
           label="Completed lectures"
           value={completedCount.toString()}
-          detail="Saved in this browser"
+          detail={isGuest ? "Guest progress" : activeProfile?.name ?? "Learner profile"}
           icon={BookOpenCheck}
         />
         <DashboardStat

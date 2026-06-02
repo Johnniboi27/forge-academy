@@ -143,3 +143,11 @@ export interface ProgressState {
     lastPracticeDate?: string;
   };
 }
+
+export interface LearnerProfile {
+  id: string;
+  name: string;
+  email?: string;
+  createdAt: string;
+  lastLoginAt: string;
+}
