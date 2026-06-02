@@ -1,0 +1,9 @@
+1:"$Sreact.fragment"
+2:I[47257,["/forge-academy/_next/static/chunks/1uvlkt9mtzxwa.js","/forge-academy/_next/static/chunks/14mrh2-p_w84d.js","/forge-academy/_next/static/chunks/3tdf785du7oax.js"],"ClientPageRoot"]
+3:I[17683,["/forge-academy/_next/static/chunks/1uvlkt9mtzxwa.js","/forge-academy/_next/static/chunks/14mrh2-p_w84d.js","/forge-academy/_next/static/chunks/3tdf785du7oax.js","/forge-academy/_next/static/chunks/0gw34f2vmcffi.js"],"default"]
+6:I[97367,["/forge-academy/_next/static/chunks/1uvlkt9mtzxwa.js","/forge-academy/_next/static/chunks/14mrh2-p_w84d.js","/forge-academy/_next/static/chunks/3tdf785du7oax.js"],"OutletBoundary"]
+7:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/forge-academy/_next/static/chunks/0gw34f2vmcffi.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"qSEHT1Krp8se6FO855-7s"}
+4:{}
+5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
+8:null

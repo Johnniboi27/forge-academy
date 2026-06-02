@@ -1,0 +1,2 @@
+:HL["/forge-academy/_next/static/chunks/06kcxzg9kgegm.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"lecture","param":null,"prefetchHints":0,"slots":{"children":{"name":"lectureId","param":{"type":"d","key":"linear-algebra-for-engineers-3-3-project-ready-problem-solving","siblings":null},"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"qSEHT1Krp8se6FO855-7s"}
